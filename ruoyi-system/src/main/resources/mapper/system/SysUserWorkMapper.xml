@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.SysUserWorkMapper">
+    
+    <resultMap type="SysUserWork" id="SysUserWorkResult">
+        <result property="workId"    column="work_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="workType"    column="work_type"    />
+        <result property="title"    column="title"    />
+        <result property="mediaUrl"    column="media_url"    />
+        <result property="status"    column="status"    />
+        <result property="isPublic"    column="is_public"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectSysUserWorkVo">
+        select work_id, user_id, work_type, title, media_url, status, is_public, create_by, create_time, update_by, update_time, remark from sys_user_work
+    </sql>
+
+    <select id="selectSysUserWorkList" parameterType="SysUserWork" resultMap="SysUserWorkResult">
+        <include refid="selectSysUserWorkVo"/>
+        <where>  
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="workType != null  and workType != ''"> and work_type = #{workType}</if>
+            <if test="title != null  and title != ''"> and title = #{title}</if>
+            <if test="mediaUrl != null  and mediaUrl != ''"> and media_url = #{mediaUrl}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+            <if test="isPublic != null  and isPublic != ''"> and is_public = #{isPublic}</if>
+        </where>
+    </select>
+    
+    <select id="selectSysUserWorkByWorkId" parameterType="Long" resultMap="SysUserWorkResult">
+        <include refid="selectSysUserWorkVo"/>
+        where work_id = #{workId}
+    </select>
+
+    <insert id="insertSysUserWork" parameterType="SysUserWork" useGeneratedKeys="true" keyProperty="workId">
+        insert into sys_user_work
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="workType != null">work_type,</if>
+            <if test="title != null">title,</if>
+            <if test="mediaUrl != null">media_url,</if>
+            <if test="status != null">status,</if>
+            <if test="isPublic != null">is_public,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="workType != null">#{workType},</if>
+            <if test="title != null">#{title},</if>
+            <if test="mediaUrl != null">#{mediaUrl},</if>
+            <if test="status != null">#{status},</if>
+            <if test="isPublic != null">#{isPublic},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateSysUserWork" parameterType="SysUserWork">
+        update sys_user_work
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="workType != null">work_type = #{workType},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="mediaUrl != null">media_url = #{mediaUrl},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="isPublic != null">is_public = #{isPublic},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where work_id = #{workId}
+    </update>
+
+    <delete id="deleteSysUserWorkByWorkId" parameterType="Long">
+        delete from sys_user_work where work_id = #{workId}
+    </delete>
+
+    <delete id="deleteSysUserWorkByWorkIds" parameterType="String">
+        delete from sys_user_work where work_id in 
+        <foreach item="workId" collection="array" open="(" separator="," close=")">
+            #{workId}
+        </foreach>
+    </delete>
+</mapper>
