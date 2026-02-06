@@ -217,6 +217,12 @@
                 <artifactId>ruoyi-common</artifactId>
                 <version>${ruoyi.version}</version>
             </dependency>
+<!--            调用豆包api-->
+            <dependency>
+                <groupId>com.volcengine</groupId>
+                <artifactId>volcengine-java-sdk-ark-runtime</artifactId>
+                <version>0.1.24</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>

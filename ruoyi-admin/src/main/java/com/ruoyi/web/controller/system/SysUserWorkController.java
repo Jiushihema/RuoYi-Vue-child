@@ -77,7 +77,12 @@ public class SysUserWorkController extends BaseController
     @PostMapping
     public AjaxResult add(@RequestBody SysUserWork sysUserWork)
     {
-        return toAjax(sysUserWorkService.insertSysUserWork(sysUserWork));
+        // 1. 先执行插入逻辑（这一步会调用豆包AI，比较慢，会卡住几秒）
+        // 注意：sysUserWork 对象是“引用传递”，Service里填进去的 URL，这里也能读到
+        sysUserWorkService.insertSysUserWork(sysUserWork);
+
+        // 2. 把填好 URL 的对象，直接封装进 data 字段返回给前端
+        return AjaxResult.success(sysUserWork);
     }
 
     /**

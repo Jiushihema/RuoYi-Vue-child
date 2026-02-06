@@ -74,9 +74,28 @@
       <el-table-column label="作品ID" align="center" prop="workId" />
       <el-table-column label="作品类型 (image=图, video=视频)" align="center" prop="workType" />
       <el-table-column label="提示词/标题 (Prompt)" align="center" prop="title" />
-      <el-table-column label="作品地址 (存URL)" align="center" prop="mediaUrl" width="100">
+<!--      <el-table-column label="作品地址 (存URL)" align="center" prop="mediaUrl" width="100">-->
+<!--        <template slot-scope="scope">-->
+<!--          <image-preview :src="scope.row.mediaUrl" :width="50" :height="50"/>-->
+<!--        </template>-->
+<!--      </el-table-column>-->
+      <el-table-column label="作品预览" align="center" width="200">
         <template slot-scope="scope">
-          <image-preview :src="scope.row.mediaUrl" :width="50" :height="50"/>
+          <video
+            v-if="scope.row.workType === 'video' && scope.row.mediaUrl"
+            :src="'http://localhost:8080' + scope.row.mediaUrl"
+            style="width: 160px; height: 90px; border-radius: 4px; object-fit: cover;"
+            controls>
+          </video>
+
+          <el-image
+            v-else-if="scope.row.mediaUrl"
+            style="width: 100px; height: 100px; border-radius: 4px"
+            :src="'http://localhost:8080' + scope.row.mediaUrl"
+            :preview-src-list="['http://localhost:8080' + scope.row.mediaUrl]">
+          </el-image>
+
+          <span v-else style="color: #999">生成中...</span>
         </template>
       </el-table-column>
       <el-table-column label="状态 (0=生成中, 1=成功, 2=失败)" align="center" prop="status" />
@@ -101,7 +120,7 @@
         </template>
       </el-table-column>
     </el-table>
-    
+
     <pagination
       v-show="total>0"
       :total="total"
@@ -118,6 +137,12 @@
         </el-form-item>
         <el-form-item label="提示词/标题 (Prompt)" prop="title">
           <el-input v-model="form.title" placeholder="请输入提示词/标题 (Prompt)" />
+        </el-form-item>
+        <el-form-item label="创作类型" prop="workType">
+          <el-radio-group v-model="form.workType">
+            <el-radio label="image">🎨 AI 绘画</el-radio>
+            <el-radio label="video">🎬 AI 视频</el-radio>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="作品地址 (存URL)" prop="mediaUrl">
           <image-upload v-model="form.mediaUrl"/>
@@ -200,10 +225,10 @@ export default {
       this.form = {
         workId: null,
         userId: null,
-        workType: null,
         title: null,
         mediaUrl: null,
         status: null,
+        workType: "image",
         isPublic: null,
         createBy: null,
         createTime: null,
