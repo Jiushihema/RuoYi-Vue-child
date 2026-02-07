@@ -7,8 +7,7 @@ import com.ruoyi.common.core.domain.BaseEntity;
 
 /**
  * 用户AI作品对象 sys_user_work
- * 
- * @author ruoyi
+ * * @author ruoyi
  * @date 2026-02-06
  */
 public class SysUserWork extends BaseEntity
@@ -29,6 +28,10 @@ public class SysUserWork extends BaseEntity
     @Excel(name = "提示词/标题 (Prompt)")
     private String title;
 
+    /** ✅ 新增：参考图地址 (图生视频用) */
+    @Excel(name = "参考图地址")
+    private String refImageUrl;
+
     /** 作品地址 (存URL) */
     @Excel(name = "作品地址 (存URL)")
     private String mediaUrl;
@@ -41,72 +44,83 @@ public class SysUserWork extends BaseEntity
     @Excel(name = "是否公开 (0=私有, 1=公开)")
     private String isPublic;
 
-    public void setWorkId(Long workId) 
+    public void setWorkId(Long workId)
     {
         this.workId = workId;
     }
 
-    public Long getWorkId() 
+    public Long getWorkId()
     {
         return workId;
     }
 
-    public void setUserId(Long userId) 
+    public void setUserId(Long userId)
     {
         this.userId = userId;
     }
 
-    public Long getUserId() 
+    public Long getUserId()
     {
         return userId;
     }
 
-    public void setWorkType(String workType) 
+    public void setWorkType(String workType)
     {
         this.workType = workType;
     }
 
-    public String getWorkType() 
+    public String getWorkType()
     {
         return workType;
     }
 
-    public void setTitle(String title) 
+    public void setTitle(String title)
     {
         this.title = title;
     }
 
-    public String getTitle() 
+    public String getTitle()
     {
         return title;
     }
 
-    public void setMediaUrl(String mediaUrl) 
+    /** ✅ 新增：参考图 Getter/Setter */
+    public void setRefImageUrl(String refImageUrl)
+    {
+        this.refImageUrl = refImageUrl;
+    }
+
+    public String getRefImageUrl()
+    {
+        return refImageUrl;
+    }
+
+    public void setMediaUrl(String mediaUrl)
     {
         this.mediaUrl = mediaUrl;
     }
 
-    public String getMediaUrl() 
+    public String getMediaUrl()
     {
         return mediaUrl;
     }
 
-    public void setStatus(String status) 
+    public void setStatus(String status)
     {
         this.status = status;
     }
 
-    public String getStatus() 
+    public String getStatus()
     {
         return status;
     }
 
-    public void setIsPublic(String isPublic) 
+    public void setIsPublic(String isPublic)
     {
         this.isPublic = isPublic;
     }
 
-    public String getIsPublic() 
+    public String getIsPublic()
     {
         return isPublic;
     }
@@ -114,18 +128,19 @@ public class SysUserWork extends BaseEntity
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
-            .append("workId", getWorkId())
-            .append("userId", getUserId())
-            .append("workType", getWorkType())
-            .append("title", getTitle())
-            .append("mediaUrl", getMediaUrl())
-            .append("status", getStatus())
-            .append("isPublic", getIsPublic())
-            .append("createBy", getCreateBy())
-            .append("createTime", getCreateTime())
-            .append("updateBy", getUpdateBy())
-            .append("updateTime", getUpdateTime())
-            .append("remark", getRemark())
-            .toString();
+                .append("workId", getWorkId())
+                .append("userId", getUserId())
+                .append("workType", getWorkType())
+                .append("title", getTitle())
+                .append("refImageUrl", getRefImageUrl()) // ✅ 新增
+                .append("mediaUrl", getMediaUrl())
+                .append("status", getStatus())
+                .append("isPublic", getIsPublic())
+                .append("createBy", getCreateBy())
+                .append("createTime", getCreateTime())
+                .append("updateBy", getUpdateBy())
+                .append("updateTime", getUpdateTime())
+                .append("remark", getRemark())
+                .toString();
     }
 }

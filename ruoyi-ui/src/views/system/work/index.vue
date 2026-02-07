@@ -1,21 +1,19 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="用户ID (关联sys_user表)" prop="userId">
+      <el-form-item label="提示词" prop="title">
         <el-input
-          v-model="queryParams.userId"
-          placeholder="请输入用户ID (关联sys_user表)"
+          v-model="queryParams.title"
+          placeholder="请输入提示词/标题"
           clearable
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="提示词/标题 (Prompt)" prop="title">
-        <el-input
-          v-model="queryParams.title"
-          placeholder="请输入提示词/标题 (Prompt)"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
+      <el-form-item label="类型" prop="workType">
+        <el-select v-model="queryParams.workType" placeholder="请选择类型" clearable>
+          <el-option label="AI 绘画" value="image" />
+          <el-option label="AI 视频" value="video" />
+        </el-select>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
@@ -32,7 +30,7 @@
           size="mini"
           @click="handleAdd"
           v-hasPermi="['system:work:add']"
-        >新增</el-button>
+        >创建作品</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button
@@ -71,17 +69,63 @@
 
     <el-table v-loading="loading" :data="workList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="作品ID" align="center" prop="workId" />
-      <el-table-column label="作品类型 (image=图, video=视频)" align="center" prop="workType" />
-      <el-table-column label="提示词/标题 (Prompt)" align="center" prop="title" />
-      <el-table-column label="作品地址 (存URL)" align="center" prop="mediaUrl" width="100">
+      <el-table-column label="ID" align="center" prop="workId" width="60" />
+
+      <el-table-column label="提示词" align="center" prop="title" :show-overflow-tooltip="true" />
+
+      <el-table-column label="参考图(图生视频)" align="center" width="100">
         <template slot-scope="scope">
-          <image-preview :src="scope.row.mediaUrl" :width="50" :height="50"/>
+          <image-preview v-if="scope.row.refImageUrl" :src="scope.row.refImageUrl" :width="50" :height="50"/>
+          <span v-else style="color:#ccc">-</span>
         </template>
       </el-table-column>
-      <el-table-column label="状态 (0=生成中, 1=成功, 2=失败)" align="center" prop="status" />
-      <el-table-column label="是否公开 (0=私有, 1=公开)" align="center" prop="isPublic" />
-      <el-table-column label="备注 (存失败原因等)" align="center" prop="remark" />
+
+      <el-table-column label="类型" align="center" prop="workType" width="80">
+        <template slot-scope="scope">
+          <el-tag v-if="scope.row.workType === 'video'" type="warning">视频</el-tag>
+          <el-tag v-else type="success">绘画</el-tag>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="生成结果" align="center" width="220">
+        <template slot-scope="scope">
+          <video
+            v-if="scope.row.workType === 'video' && scope.row.mediaUrl"
+            :src="getAbsUrl(scope.row.mediaUrl)"
+            style="width: 180px; height: 100px; border-radius: 4px; object-fit: cover; background: #000;"
+            controls preload="metadata">
+          </video>
+          <image-preview
+            v-else-if="scope.row.mediaUrl"
+            :src="scope.row.mediaUrl"
+            :width="100" :height="100"
+          />
+          <div v-else>
+            <el-tag type="danger" v-if="scope.row.status==='2'">生成失败</el-tag>
+            <el-tag type="info" v-else><i class="el-icon-loading"></i> 生成中...</el-tag>
+          </div>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="公开状态" align="center" prop="isPublic" width="80">
+        <template slot-scope="scope">
+          <el-switch
+            v-model="scope.row.isPublic"
+            active-value="1"
+            inactive-value="0"
+            @change="handleStatusChange(scope.row)"
+          ></el-switch>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="状态" align="center" prop="status" width="80">
+        <template slot-scope="scope">
+          <el-tag v-if="scope.row.status==='1'" type="success">成功</el-tag>
+          <el-tag v-else-if="scope.row.status==='2'" type="danger">失败</el-tag>
+          <el-tag v-else type="info">进行中</el-tag>
+        </template>
+      </el-table-column>
+
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
@@ -101,7 +145,7 @@
         </template>
       </el-table-column>
     </el-table>
-    
+
     <pagination
       v-show="total>0"
       :total="total"
@@ -110,25 +154,52 @@
       @pagination="getList"
     />
 
-    <!-- 添加或修改用户AI作品对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
-      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="用户ID (关联sys_user表)" prop="userId">
-          <el-input v-model="form.userId" placeholder="请输入用户ID (关联sys_user表)" />
+    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body :close-on-click-modal="false">
+      <el-form ref="form" :model="form" :rules="rules" label-width="100px">
+
+        <el-form-item label="创作类型" prop="workType">
+          <el-radio-group v-model="form.workType">
+            <el-radio label="image">🎨 AI 绘画 (魔法画室)</el-radio>
+            <el-radio label="video">🎬 AI 视频 (导演工作室)</el-radio>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="提示词/标题 (Prompt)" prop="title">
-          <el-input v-model="form.title" placeholder="请输入提示词/标题 (Prompt)" />
+
+        <el-form-item label="参考底图" prop="refImageUrl" v-if="form.workType === 'video'">
+          <image-upload v-model="form.refImageUrl" :limit="1"/>
+          <div style="font-size: 12px; color: #999; line-height: 1.5;">
+            <i class="el-icon-info"></i> 选填：上传图片则进行<b>“图生视频”</b>，不传则进行<b>“文生视频”</b>。
+          </div>
         </el-form-item>
-        <el-form-item label="作品地址 (存URL)" prop="mediaUrl">
-          <image-upload v-model="form.mediaUrl"/>
+
+        <el-form-item label="提示词" prop="title">
+          <el-input
+            v-model="form.title"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入画面的描述，例如：一只在太空漫步的猫..."
+          />
         </el-form-item>
-        <el-form-item label="备注 (存失败原因等)" prop="remark">
-          <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
+
+        <el-form-item label="是否公开" prop="isPublic">
+          <el-switch
+            v-model="form.isPublic"
+            active-value="1"
+            inactive-value="0"
+            active-text="公开到艺术长廊"
+            inactive-text="私有"
+          ></el-switch>
         </el-form-item>
+
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="form.remark" placeholder="请输入备注" />
+        </el-form-item>
+
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitForm">确 定</el-button>
-        <el-button @click="cancel">取 消</el-button>
+        <el-button type="primary" @click="submitForm" :loading="submitLoading">
+          {{ submitLoading ? 'AI 正在生成中 (约1-3分钟)...' : '开始生成' }}
+        </el-button>
+        <el-button @click="cancel" v-if="!submitLoading">取 消</el-button>
       </div>
     </el-dialog>
   </div>
@@ -143,6 +214,8 @@ export default {
     return {
       // 遮罩层
       loading: true,
+      // 提交按钮loading
+      submitLoading: false,
       // 选中数组
       ids: [],
       // 非单个禁用
@@ -166,14 +239,18 @@ export default {
         userId: null,
         workType: null,
         title: null,
-        mediaUrl: null,
         status: null,
-        isPublic: null,
       },
       // 表单参数
       form: {},
       // 表单校验
       rules: {
+        title: [
+          { required: true, message: "提示词/标题不能为空", trigger: "blur" }
+        ],
+        workType: [
+          { required: true, message: "请选择创作类型", trigger: "change" }
+        ]
       }
     }
   },
@@ -181,6 +258,14 @@ export default {
     this.getList()
   },
   methods: {
+    /** 辅助方法：处理绝对路径 (防止本地开发视频裂开) */
+    getAbsUrl(url) {
+      if (!url) return '';
+      if (url.startsWith('http')) return url;
+      // 拼接若依环境变量
+      return process.env.VUE_APP_BASE_API + url;
+    },
+
     /** 查询用户AI作品列表 */
     getList() {
       this.loading = true
@@ -200,18 +285,16 @@ export default {
       this.form = {
         workId: null,
         userId: null,
-        workType: null,
+        workType: "image", // 默认选中绘画
         title: null,
         mediaUrl: null,
-        status: null,
-        isPublic: null,
-        createBy: null,
-        createTime: null,
-        updateBy: null,
-        updateTime: null,
+        refImageUrl: null, // 初始化参考图
+        status: "0",
+        isPublic: "0",     // 默认私有
         remark: null
       }
       this.resetForm("form")
+      this.submitLoading = false;
     },
     /** 搜索按钮操作 */
     handleQuery() {
@@ -233,7 +316,7 @@ export default {
     handleAdd() {
       this.reset()
       this.open = true
-      this.title = "添加用户AI作品"
+      this.title = "创建新作品"
     },
     /** 修改按钮操作 */
     handleUpdate(row) {
@@ -242,24 +325,50 @@ export default {
       getWork(workId).then(response => {
         this.form = response.data
         this.open = true
-        this.title = "修改用户AI作品"
+        this.title = "修改作品信息"
       })
+    },
+    /** 列表开关直接修改状态 */
+    handleStatusChange(row) {
+      let text = row.isPublic === "1" ? "公开" : "私有";
+      this.$modal.confirm('确认要设置为"' + text + '"吗？').then(function() {
+        return updateWork({ workId: row.workId, isPublic: row.isPublic });
+      }).then(() => {
+        this.$modal.msgSuccess(text + "设置成功");
+      }).catch(function() {
+        row.isPublic = row.isPublic === "0" ? "1" : "0";
+      });
     },
     /** 提交按钮 */
     submitForm() {
       this.$refs["form"].validate(valid => {
         if (valid) {
+          this.submitLoading = true; // 锁定按钮
+
+          // 提示语优化
+          if (this.form.workType === 'video') {
+            this.$notify.info({
+              title: '正在制作视频',
+              message: 'AI 导演正在处理中，耗时较长(约1-3分钟)，请耐心等待，不要关闭窗口...',
+              duration: 6000
+            });
+          }
+
           if (this.form.workId != null) {
             updateWork(this.form).then(response => {
               this.$modal.msgSuccess("修改成功")
               this.open = false
               this.getList()
-            })
+            }).finally(() => { this.submitLoading = false })
           } else {
             addWork(this.form).then(response => {
-              this.$modal.msgSuccess("新增成功")
+              this.$modal.msgSuccess("生成成功！")
               this.open = false
               this.getList()
+            }).catch(err => {
+              console.error(err)
+            }).finally(() => {
+              this.submitLoading = false
             })
           }
         }
@@ -268,7 +377,7 @@ export default {
     /** 删除按钮操作 */
     handleDelete(row) {
       const workIds = row.workId || this.ids
-      this.$modal.confirm('是否确认删除用户AI作品编号为"' + workIds + '"的数据项？').then(function() {
+      this.$modal.confirm('是否确认删除作品编号为"' + workIds + '"的数据项？').then(function() {
         return delWork(workIds)
       }).then(() => {
         this.getList()
